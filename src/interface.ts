@@ -1,11 +1,14 @@
 export interface XmlNode {
     attributes: { [key: string]: string };
     cData?: boolean;
-    children?: XmlNode[];
+    children: (XmlNode | string)[];
     tagName: string;
     text?: string;
 }
 
+type ChildrenType<T> = T extends (infer R)[] ? R : T;
+
+export type XmlNodeChildren = ChildrenType<XmlNode['children']>;
 
 export interface IParserOptions {
     /**

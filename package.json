@@ -2,7 +2,8 @@
   "name": "xml2obj",
   "version": "1.0.0",
   "description": "xml",
-  "main": "index.js",
+  "main": "src/index.js",
+  "module": "commonjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -12,6 +13,9 @@
   "author": "mingj",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^20.2.5",
+    "benchmark": "^2.1.4",
+    "txml": "^5.1.1",
     "typescript": "^5.0.4"
   }
 }
