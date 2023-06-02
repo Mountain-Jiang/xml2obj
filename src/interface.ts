@@ -1,9 +1,9 @@
 export interface XmlNode {
     attributes: { [key: string]: string };
-    cData?: boolean;
+    cData?: string;
     children: (XmlNode | string)[];
+    isSingle?: boolean;
     tagName: string;
-    text?: string;
 }
 
 type ChildrenType<T> = T extends (infer R)[] ? R : T;

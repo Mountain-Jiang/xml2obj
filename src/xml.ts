@@ -12,7 +12,9 @@ type NodeCallbackFunc = IParserOptions["callback"];
 
 interface ITag {
     attributes: Record<string, string>;
+    cdata?: string;
     isStart: boolean;
+    isSingle?: boolean;
     tagName: string;
 }
 
@@ -34,6 +36,7 @@ export class XmlParser {
     private nodeFilter: Set<string> = new Set();
     private pos: number = 0;
     private xml: string = '';
+    private noChildNodes: Set<string> = new Set(['img', 'br', 'input', 'meta', 'link', 'hr']);
 
     constructor(private readonly options?: IParserOptions) {}
 
@@ -56,15 +59,19 @@ export class XmlParser {
             let curNode: XmlNode | undefined;
             if (char === openBracket) { // open or clase tag
                 const textEnd = this.pos - 1;
-                const textNode = textStart !== -1 && this.subStr(textStart, textEnd);
+                const textNode = textStart !== -1 && this.subStr(textStart, textEnd).trim(); // 去除正式文本前后的空白字符（有时会有缩进）
                 const tag = this.parseTag();
                 if (tag.isStart) {
                     if (textNode) {
                         appendToParent(textNode);
                     }
                     const node = this.xmlNodeBuild(tag);
-                    nodeStack.push(node);
-                    curNode = node;
+                    if (tag.isSingle) {
+                        appendToParent(node.cData || node);
+                    } else {
+                        nodeStack.push(node);
+                        curNode = node;
+                    }
                 } else {
                     const stackTop = nodeStack.pop();
                     if (!stackTop || stackTop.tagName !== tag.tagName) {
@@ -77,7 +84,6 @@ export class XmlParser {
                     }
                     curNode = stackTop;
                     if (textNode) {
-                        // curNode.text = this.subStr(textStart, textEnd);
                         curNode.children.push(textNode)
                     }
 
@@ -100,41 +106,60 @@ export class XmlParser {
     }
 
     private parseTag(): ITag | null {
-        const isStart = this.xml[this.pos] !== slash;
-        let start = isStart ? this.pos : this.pos + 1;
-        const len = this.xml.length;
-        const attributes: Record<string, string> = {};
-        let tagName = '';
-        while (this.pos < len) {
-            const char = this.char();
-            if (isSpace(char) || char === closeBracket) {
-                this.pos--;
-                tagName = this.subStr(start, this.pos);
-                break;
-            }
-        }
-        let attrName = '';
-        while (this.pos < len) {
-            const char = this.char();
-            if (char === closeBracket) break;
-            if (char === singleQuote || char === doubleQuote) {
-                const start = this.pos;
-                while (this.pos < len && this.char() !== char);
-                if (attrName) {
-                    attributes[attrName] = this.subStr(start, this.pos - 1);
-                }
-            } else if (!isNameSpacer(char)) {
-                const start = this.pos - 1;
-                while (this.pos < len && !isNameSpacer(this.char()));
-                attrName = this.subStr(start, this.pos - 1);
-            }
-        }
-
+        const xml = this.xml;
+        let pos = this.pos;
+        const isStart = xml[pos] !== slash;
         const tag: ITag = {
-            tagName,
-            attributes,
-            isStart,
+            tagName: '',
+            attributes: {},
+            isStart: isStart,
         };
+        if (
+            isStart && 
+            xml[pos] === exclamation &&
+            xml[pos + 1] === openCornerBracket &&
+            xml.substring(pos + 2, pos + 8).toLowerCase() === 'cdata['
+        ) {
+            const endIndex = xml.indexOf(']]>', pos);
+            tag.cdata = xml.substring(pos + 8, endIndex);
+            tag.isSingle = true;
+            pos = endIndex + 3;
+        } else {
+            const len = xml.length;
+            let start = isStart ? pos : pos + 1;
+            while (pos < len) {
+                const char = xml[pos];
+                if (isSpace(char) || char === closeBracket) {
+                    tag.tagName = xml.substring(start, pos);
+                    break;
+                }
+                pos++;
+            }
+            let attrName = '';
+            while (pos < len) {
+                const char = xml[pos++];
+                if (char === closeBracket) {
+                    const prev = xml[pos - 2];
+                    if (prev === slash || prev === questionMark) {
+                        tag.isSingle = true;
+                    }
+                    break;
+                }
+                if (char === singleQuote || char === doubleQuote) {
+                    const start = pos;
+                    while (pos < len && xml[pos++] !== char);
+                    if (attrName) {
+                        tag.attributes[attrName] = xml.substring(start, pos - 1);
+                    }
+                } else if (!isNameSpacer(char)) {
+                    const start = pos - 1;
+                    while (pos < len && !isNameSpacer(xml[pos++]));
+                    attrName = xml.substring(start, pos - 1);
+                }
+            }
+        }
+        this.pos = pos;
+        if (this.noChildNodes.has(tag.tagName)) tag.isSingle = true;
         return tag;
     }
 
@@ -152,10 +177,16 @@ export class XmlParser {
     }
 
     private xmlNodeBuild(tag: ITag): XmlNode {
-        return {
+        const node: XmlNode = {
             tagName: tag.tagName,
             attributes: tag.attributes,
             children: [],
         };
+        // if (tag.cdata) {
+        //     node.cData = tag.cdata;
+        // }
+        // if (tag.isSingle) node.isSingle = true;
+
+        return node;
     }
 }

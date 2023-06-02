@@ -17,5 +17,5 @@ export function isSpace(char: string): boolean {
 }
 
 export function isNameSpacer(char: string): boolean {
-    return isSpace(char) || char === '>' || char === '/' || char === '=';
+    return isSpace(char) || char === '>' || char === '/' || char === '=' || char === '?';
 }
