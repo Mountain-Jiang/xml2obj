@@ -17,5 +17,8 @@
     "benchmark": "^2.1.4",
     "txml": "^5.1.1",
     "typescript": "^5.0.4"
+  },
+  "dependencies": {
+    "assert": "^2.0.0"
   }
 }

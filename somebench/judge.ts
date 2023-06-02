@@ -23,6 +23,13 @@ suite.add("index match", () => { // 2nd
     while (space.has(testStr[pos]) && testStr[pos]) {
         pos++;
     }
+}).add('substring +=', () => { // 3rd
+    let str = '';
+    for (let i = 3; i < 10; i++) {
+        str += testStr[i];
+    }
+}).add('substring .()', () => { // 3rd
+    testStr.substring(3, 10);
 }).on('cycle', function (event: any) {
     console.log(String(event.target));
 }).run();
